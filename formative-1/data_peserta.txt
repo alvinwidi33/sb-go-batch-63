@@ -1,0 +1,11 @@
+Data Peserta Bootcamp Digital Skill - Golang Backend Development
+1. Nama: Alvin Widi Nugroho
+2. Email: alvinwidinugroho@gmail.com
+3. Sistem Operasi yang digunakan: Windows
+4. Akun Github: alvinwidi33
+5. Akun Telegram: Alvin Widi
+6. Role Pekerjaan (BE/FE/DEVOPS/MAHASISWA) : MAHASISWA
+7. Umur: 21 tahun
+8. Pernah menggunakan Go? : Belum
+9. Bahasa Pemrograman yg pernah dipelajari: Python, Java, Javascript, Typescript
+10. Pernah membuat REST API? : Pernah
