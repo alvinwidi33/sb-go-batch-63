@@ -64,7 +64,7 @@ func main() {
 	var bookString = string(book)
 	fmt.Println(bookString)
 
-
+	// soal 4
 	http.HandleFunc("/", webserver.Handler)
 	fmt.Println("Server running on http://localhost:8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil {

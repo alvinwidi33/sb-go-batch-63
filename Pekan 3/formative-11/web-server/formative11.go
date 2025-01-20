@@ -6,6 +6,7 @@ import (
 	"net/http"
 )
 
+// soal 4
 func luasAlas(jariJari int) string {
 	return fmt.Sprintf("luas alas: %.2f", math.Pi*math.Pow(float64(jariJari), 2))
 }
