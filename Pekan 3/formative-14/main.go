@@ -4,7 +4,6 @@ import (
     "database/sql"
     "fmt"
     "github.com/gin-gonic/gin"
-    "github.com/joho/godotenv"
     "formative-14/controllers"
     "formative-14/database"
     "os"
@@ -19,10 +18,10 @@ var (
 
 func main() {
 
-    err = godotenv.Load("config/.env")
-    if err != nil {
-       panic("Error loading .env file")
-    }
+    // err = godotenv.Load("config/.env")
+    // if err != nil {
+    //    panic("Error loading .env file")
+    // }
 
     psqlInfo := fmt.Sprintf(`host=%s port=%s user=%s password=%s dbname=%s sslmode=disable`,
        os.Getenv("PGHOST"),
