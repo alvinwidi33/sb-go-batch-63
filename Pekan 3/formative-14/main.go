@@ -46,5 +46,10 @@ func main() {
     router.PUT("/persons/:id", controllers.UpdatePerson)
     router.DELETE("/persons/:id", controllers.DeletePerson)
 
-    router.Run("PORT")
+    port := os.Getenv("PORT")
+    if port == "" {
+        port = "8080" // Default port jika PORT tidak ditemukan
+    }
+    router.Run(":" + port)
+    
 }
