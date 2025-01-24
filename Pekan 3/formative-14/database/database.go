@@ -7,6 +7,8 @@ import (
     migrate "github.com/rubenv/sql-migrate"
 )
 
+// Embed folder sql_migrations
+//go:embed sql_migrations/*
 var dbMigrations embed.FS
 
 var DbConnection *sql.DB
@@ -14,7 +16,7 @@ var DbConnection *sql.DB
 func DBMigrate(dbParam *sql.DB) {
     migrations := &migrate.EmbedFileSystemMigrationSource{
         FileSystem: dbMigrations,
-        Root:       "sql_migrations",
+        Root:       "sql_migrations", // Pastikan path sesuai
     }
 
     n, errs := migrate.Exec(dbParam, "postgres", migrations, migrate.Up)
