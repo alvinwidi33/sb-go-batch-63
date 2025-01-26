@@ -4,7 +4,6 @@ import (
     "database/sql"
     "fmt"
     "os"
-    "github.com/joho/godotenv"
     "Quiz-3/controllers"
     "Quiz-3/database"
     "Quiz-3/middleware"
@@ -19,10 +18,7 @@ var (
 )
 
 func main() {
-    err := godotenv.Load("config/.env")
-	if err != nil {
-		panic(err)
-	}
+
     psqlInfo := fmt.Sprintf(`host=%s port=%s user=%s password=%s dbname=%s sslmode=disable`,
         os.Getenv("PGHOST"),
         os.Getenv("PGPORT"),
