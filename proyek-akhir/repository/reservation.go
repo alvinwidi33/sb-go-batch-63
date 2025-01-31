@@ -1,0 +1,233 @@
+package repository
+
+import (
+	"database/sql"
+	"encoding/json"
+	"log"
+	"proyek-akhir/structs"
+	"time"
+	"fmt"
+)
+type ReservationRepository struct {
+	DB *sql.DB
+}
+
+func GetAllReservation(db *sql.DB) (result []structs.Reservation, err error) {
+	sqlQuery := `
+        SELECT 
+            r.id, r.services, r.start, r.done, 
+            r.is_done, r.is_cancel, r.rating, r.feedback, 
+            c.customer_id, c.status, u.id, u.username,
+            u.role, u.is_active
+        FROM reservation r
+        JOIN customer c ON r.customer_id = c.customer_id
+        JOIN users u ON c.user_id = u.id
+    `
+
+	rows, err := db.Query(sqlQuery)
+	if err != nil {
+		return nil, fmt.Errorf("query error: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var reservation structs.Reservation
+		var customer structs.Customer
+		var user structs.Users
+		var servicesData []byte
+
+		err = rows.Scan(
+			&reservation.ID, &servicesData, &reservation.Start, &reservation.Done, &reservation.IsDone,
+			&reservation.IsCancel, &reservation.Rating, &reservation.Feedback, &customer.CustomerID, &customer.Status, &user.ID,
+			&user.Username, &user.Role, &user.IsActive,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("row scan error: %w", err)
+		}
+
+		if err := json.Unmarshal(servicesData, &reservation.Services); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal services JSON: %w", err)
+		}
+
+		customer.User = &user
+		reservation.Customer = &customer
+		result = append(result, reservation)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration error: %w", err)
+	}
+
+	return result, nil
+}
+
+
+func GetAllReservationByCustomerID(db *sql.DB, customerID string) (result []structs.Reservation, err error) {
+	sqlQuery := `
+        SELECT 
+			r.id, r.services, r.start, r.done, 
+			r.is_done, r.is_cancel, r.rating, r.feedback, 
+			c.customer_id, c.status , u.id AS user_id, u.username,
+			u.role, u.is_active
+		FROM reservation r
+		JOIN customer c ON r.customer_id = c.customer_id
+		JOIN users u ON c.user_id = u.id
+		WHERE c.customer_id = $1
+    `
+
+	rows, err := db.Query(sqlQuery, customerID)
+	if err != nil {
+		return nil, fmt.Errorf("query error: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var reservation structs.Reservation
+		var customer structs.Customer
+		var user structs.Users
+		var servicesData []byte 
+
+		err = rows.Scan(
+			&reservation.ID, &servicesData, &reservation.Start, &reservation.Done, &reservation.IsDone,
+			&reservation.IsCancel, &reservation.Rating, &reservation.Feedback, &customer.CustomerID, &customer.Status, &user.ID,
+			&user.Username, &user.Role, &user.IsActive,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("row scan error: %w", err)
+		}
+
+		if err := json.Unmarshal(servicesData, &reservation.Services); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal services JSON: %w", err)
+		}
+
+		customer.User = &user
+		reservation.Customer = &customer
+		result = append(result, reservation)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration error: %w", err)
+	}
+
+	return result, nil
+}
+
+func InsertReservation(db *sql.DB, reservation structs.Reservation) error {
+    var isMember string
+    err := db.QueryRow(`SELECT status FROM customer WHERE customer_id = $1`, reservation.CustomerID).Scan(&isMember)
+    if err != nil {
+        if err == sql.ErrNoRows {
+            return fmt.Errorf("Customer not found with ID: %s", reservation.CustomerID)
+        }
+        return err
+    }
+
+    if isMember == "Not Member" {
+        panic("Reservation not allowed for non-members")
+    }
+
+    var openTime, closeTime time.Time
+    var isDelete *bool
+    err = db.QueryRow(`SELECT open, close, is_delete FROM saloon WHERE id = $1`, reservation.SaloonID).Scan(&openTime, &closeTime, &isDelete)
+    if err != nil {
+        if err == sql.ErrNoRows {
+            return fmt.Errorf("saloon not found with ID: %d", reservation.SaloonID)
+        }
+        return err
+    }
+
+    if isDelete != nil && *isDelete {
+        return fmt.Errorf("reservation not allowed, saloon is deleted")
+    }
+
+    // Convert reservation time to local time zone
+    location, err := time.LoadLocation("Asia/Jakarta")
+    if err != nil {
+        return fmt.Errorf("failed to load time zone: %v", err)
+    }
+
+    localReservationStart := reservation.Start.In(location)
+    localOpenTime := time.Date(reservation.Start.Year(), reservation.Start.Month(), reservation.Start.Day(), openTime.Hour(), openTime.Minute(), openTime.Second(), 0, location)
+    localCloseTime := time.Date(reservation.Start.Year(), reservation.Start.Month(), reservation.Start.Day(), closeTime.Hour(), closeTime.Minute(), closeTime.Second(), 0, location)
+
+    log.Printf("Reservation start time (local): %v, Saloon open: %v, close: %v\n", localReservationStart, localOpenTime, localCloseTime)
+
+    // Validate reservation time
+    if localReservationStart.Before(localOpenTime) || localReservationStart.After(localCloseTime) {
+        return fmt.Errorf("reservation start time is outside of saloon's operating hours")
+    }
+
+    reservationEndTime := localReservationStart.Add(time.Hour)
+    if reservationEndTime.After(localCloseTime) {
+        return fmt.Errorf("reservation end time is outside of saloon's operating hours")
+    }
+
+    // Marshal services to JSON
+    servicesJSON, err := json.Marshal(reservation.Services)
+    if err != nil {
+        return err
+    }
+
+    sql := `
+        INSERT INTO reservation (
+            id, services, start, done, is_done, is_cancel, rating, feedback, customer_id, saloon_id
+        ) VALUES (
+            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+        )
+    `
+    _, err = db.Exec(sql, reservation.ID, servicesJSON, localReservationStart, reservationEndTime,
+        reservation.IsDone, reservation.IsCancel, reservation.Rating, reservation.Feedback, reservation.CustomerID,
+        reservation.SaloonID,
+    )
+
+    if err != nil {
+        log.Printf("Error inserting reservation: %v\n", err)
+        return err
+    }
+
+    log.Printf("Reservation created with ID: %d\n", reservation.ID)
+    return nil
+}
+
+
+
+func CancelReservation(db *sql.DB, reservation structs.Reservation) error {
+    sql := `
+        UPDATE reservation
+		SET is_cancel = true
+		WHERE id = $1
+    `
+    _, err := db.Exec(sql, reservation.ID)
+    if err != nil {
+       panic(err)
+    }
+
+    return nil
+}
+
+func DoneReservation(db *sql.DB, reservation structs.Reservation) error {
+    log.Println("Updating reservation with ID:", reservation.ID)
+
+    sqlQuery := `
+        UPDATE reservation
+        SET is_done = true, rating = $2, feedback = $3
+        WHERE id = $1
+    `
+
+    result, err := db.Exec(sqlQuery, reservation.ID, reservation.Rating, reservation.Feedback)
+    if err != nil {
+        log.Println("DB Error:", err)
+        return fmt.Errorf("failed to update reservation: %w", err)
+    }
+
+    rowsAffected, _ := result.RowsAffected()
+    log.Println("Rows affected:", rowsAffected)
+
+    if rowsAffected == 0 {
+        return fmt.Errorf("no reservation found with ID %d", reservation.ID)
+    }
+
+    return nil
+}
+
+
