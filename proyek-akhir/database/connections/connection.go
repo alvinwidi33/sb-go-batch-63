@@ -18,14 +18,13 @@ func Initiator() {
 	// 	panic(err)
 	// }
 
-    psqlInfo := fmt.Sprintf(
-        "host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-        os.Getenv("PGHOST"),
-        os.Getenv("DB_PORT"),
-        os.Getenv("PGUSER"),
-        os.Getenv("PGPASSWORD"),
-        os.Getenv("PGDATABASE"),
-    )
+	psqlInfo := fmt.Sprintf(`host=%s port=%s user=%s password=%s dbname=%s sslmode=disable`,
+		os.Getenv("PGHOST"),
+		os.Getenv("PGPORT"),
+		os.Getenv("PGUSER"),
+		os.Getenv("PGPASSWORD"),
+		os.Getenv("PGDATABASE"),
+	)
 
 	var err error // Tambahkan ini sebelum penggunaan err
 
