@@ -1,8 +1,8 @@
 ## ROLE ADMIN
-REGISTER AND LOGIN
+REGISTER AND LOGIN (admin ditambah langsun ke db gabisa manual)
 {
-    "username":"ayam",
-    "password":"ayam"
+    "username":"user",
+    "password":"user"
 }
 
 POST SALOON
@@ -22,6 +22,7 @@ PUT SALOON
   "close": "2025-01-31T21:00:00Z"
 }
 
+## ROLE CUSTOMER
 POST RESERVATION
 { 
   "id":0,
