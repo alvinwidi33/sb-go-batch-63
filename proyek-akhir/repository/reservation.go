@@ -154,7 +154,7 @@ func InsertReservation(db *sql.DB, reservation structs.Reservation) error {
     localCloseTime := closeTime.UTC()
 
     log.Printf("Reservation start time (UTC): %v, Saloon open: %v, close: %v\n", localReservationStart, localOpenTime, localCloseTime)
-
+    reservationEndTime := localReservationStart.Add(time.Hour)
 
 
     // Marshal services to JSON
