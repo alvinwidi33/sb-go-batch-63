@@ -56,6 +56,7 @@ func GetAllReservation(db *sql.DB) (result []structs.Reservation, err error) {
 
 		customer.User = &user
 		reservation.Customer = &customer
+		reservation.Saloon = &saloon
 		result = append(result, reservation)
 	}
 
@@ -108,6 +109,7 @@ func GetAllReservationByCustomerID(db *sql.DB, customerID string) (result []stru
 
 		customer.User = &user
 		reservation.Customer = &customer
+		reservation.Saloon = &saloon
 		result = append(result, reservation)
 	}
 
