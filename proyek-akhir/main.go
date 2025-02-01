@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"fmt"
 	"os"
 	"proyek-akhir/controllers"
 	"proyek-akhir/database/connections"
@@ -11,32 +10,29 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
-
 var (
-	DB *sql.DB
+    DB *sql.DB
 )
 
 func main() {
-	connections.Initiator()
-	DB = connections.DBConnections
+	connection.Initiator()
+
+	DB = connection.DBConnections
 	if DB == nil {
 		panic("Database connection is nil")
 	}
-
 	_, err := DB.Exec("SET TIME ZONE 'Asia/Jakarta';")
 	if err != nil {
-		fmt.Println("Failed to set timezone:", err)
+		panic(err)
 	}
-
+	
 	defer DB.Close()
-
-	// Jalankan migrasi database
-	migrations.Initiator(DB)
+	migration.Initiator(DB)
 
 	router := gin.Default()
 
 	protected := router.Group("/api")
-	protected.Use(middleware.AuthMiddleware()) // Middleware diterapkan ke semua route dalam group
+	protected.Use(middleware.AuthMiddleware()) 
 	{
 		protected.GET("/reservation", middleware.AuthMiddleware("Customer", "Admin"), controllers.GetAllReservation)
 		protected.GET("/reservation/:id", middleware.AuthMiddleware("Customer", "Admin"), controllers.GetAllReservationByCustomerID)
@@ -49,16 +45,14 @@ func main() {
 		protected.POST("/saloon", middleware.AuthMiddleware("Admin"), controllers.InsertSaloon)
 		protected.PUT("/saloon/:id", middleware.AuthMiddleware("Admin"), controllers.UpdateSaloon)
 		protected.PATCH("/saloon/:id/delete", middleware.AuthMiddleware("Admin"), controllers.DeleteSaloon)
-		protected.GET("/saloon/:id", middleware.AuthMiddleware("Admin", "Customer"), controllers.GetSaloonById)
+        protected.GET("/saloon/:id", middleware.AuthMiddleware("Admin","Customer"), controllers.GetSaloonById)
 
 		protected.GET("/users", middleware.AuthMiddleware("Admin"), controllers.GetAllCustomer)
 		protected.PATCH("/users/:id/active", middleware.AuthMiddleware("Admin"), controllers.ActivateUser)
 		protected.PATCH("/users/:id/member", middleware.AuthMiddleware("Admin"), controllers.SetCustomerMembership)
-		protected.POST("/admin", middleware.AuthMiddleware("Admin"), controllers.RegisterAdmin(DB))
-		protected.GET("/admin/saloon", middleware.AuthMiddleware("Admin"), controllers.GetAllSaloon)
+        protected.POST("/admin", middleware.AuthMiddleware("Admin"), controllers.RegisterAdmin(DB))
+        protected.GET("/admin/saloon", middleware.AuthMiddleware("Admin"), controllers.GetAllSaloon)
 	}
-
-	// Route tanpa middleware
 	router.POST("/api/login", controllers.Login(DB))
 	router.POST("/api/register", controllers.Register(DB))
 
