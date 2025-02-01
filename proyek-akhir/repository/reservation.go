@@ -19,10 +19,11 @@ func GetAllReservation(db *sql.DB) (result []structs.Reservation, err error) {
             r.id, r.services, r.start, r.done, 
             r.is_done, r.is_cancel, r.rating, r.feedback, 
             c.customer_id, c.status, u.id, u.username,
-            u.role, u.is_active
+            u.role, u.is_active, s.id, s.name, s.location, s.open, s.close
         FROM reservation r
         JOIN customer c ON r.customer_id = c.customer_id
         JOIN users u ON c.user_id = u.id
+		JOIN saloon s ON r.saloon_id = s.id
     `
 
 	rows, err := db.Query(sqlQuery)
@@ -36,12 +37,13 @@ func GetAllReservation(db *sql.DB) (result []structs.Reservation, err error) {
 		var reservation structs.Reservation
 		var customer structs.Customer
 		var user structs.Users
+		var saloon structs.Saloon
 		var servicesData []byte
 
 		err = rows.Scan(
 			&reservation.ID, &servicesData, &reservation.Start, &reservation.Done, &reservation.IsDone,
 			&reservation.IsCancel, &reservation.Rating, &reservation.Feedback, &customer.CustomerID, &customer.Status, &user.ID,
-			&user.Username, &user.Role, &user.IsActive,
+			&user.Username, &user.Role, &user.IsActive, &saloon.ID, &saloon.Name, &saloon.Location, &saloon.Open, &saloon.Close,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("row scan error: %w", err)
@@ -70,10 +72,11 @@ func GetAllReservationByCustomerID(db *sql.DB, customerID string) (result []stru
 			r.id, r.services, r.start, r.done, 
 			r.is_done, r.is_cancel, r.rating, r.feedback, 
 			c.customer_id, c.status , u.id AS user_id, u.username,
-			u.role, u.is_active
+			u.role, u.is_actives.id, s.name, s.location, s.open, s.close
 		FROM reservation r
 		JOIN customer c ON r.customer_id = c.customer_id
 		JOIN users u ON c.user_id = u.id
+		JOIN saloon s ON r.saloon_id = s.id
 		WHERE c.customer_id = $1
     `
 
@@ -87,12 +90,13 @@ func GetAllReservationByCustomerID(db *sql.DB, customerID string) (result []stru
 		var reservation structs.Reservation
 		var customer structs.Customer
 		var user structs.Users
+		var saloon structs.Saloon
 		var servicesData []byte 
 
 		err = rows.Scan(
 			&reservation.ID, &servicesData, &reservation.Start, &reservation.Done, &reservation.IsDone,
 			&reservation.IsCancel, &reservation.Rating, &reservation.Feedback, &customer.CustomerID, &customer.Status, &user.ID,
-			&user.Username, &user.Role, &user.IsActive,
+			&user.Username, &user.Role, &user.IsActive, &saloon.ID, &saloon.Name, &saloon.Location, &saloon.Open, &saloon.Close,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("row scan error: %w", err)
