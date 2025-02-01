@@ -31,10 +31,6 @@ func GetAllReservation(db *sql.DB) (result []structs.Reservation, err error) {
 	}
 	defer rows.Close()
 
-	location, err := time.LoadLocation("Asia/Jakarta")
-	if err != nil {
-		return nil, fmt.Errorf("failed to load time zone: %v", err)
-	}
 
 	for rows.Next() {
 		var reservation structs.Reservation
@@ -55,9 +51,6 @@ func GetAllReservation(db *sql.DB) (result []structs.Reservation, err error) {
 			return nil, fmt.Errorf("failed to unmarshal services JSON: %w", err)
 		}
 
-		// Convert time to Asia/Jakarta
-		reservation.Start = reservation.Start.In(location)
-		reservation.Done = reservation.Done.In(location)
 
 		customer.User = &user
 		reservation.Customer = &customer
