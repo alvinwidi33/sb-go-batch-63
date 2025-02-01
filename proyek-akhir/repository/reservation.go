@@ -155,15 +155,7 @@ func InsertReservation(db *sql.DB, reservation structs.Reservation) error {
 
     log.Printf("Reservation start time (UTC): %v, Saloon open: %v, close: %v\n", localReservationStart, localOpenTime, localCloseTime)
 
-    // Validate reservation time
-    if localReservationStart.Before(localOpenTime) || localReservationStart.After(localCloseTime) {
-        return fmt.Errorf("reservation start time is outside of saloon's operating hours")
-    }
 
-    reservationEndTime := localReservationStart.Add(time.Hour)
-    if reservationEndTime.After(localCloseTime) {
-        return fmt.Errorf("reservation end time is outside of saloon's operating hours")
-    }
 
     // Marshal services to JSON
     servicesJSON, err := json.Marshal(reservation.Services)
