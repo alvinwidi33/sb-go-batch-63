@@ -8,6 +8,7 @@ import (
 	"time"
 	"fmt"
 )
+
 type ReservationRepository struct {
 	DB *sql.DB
 }
@@ -54,7 +55,7 @@ func GetAllReservation(db *sql.DB) (result []structs.Reservation, err error) {
 			return nil, fmt.Errorf("failed to unmarshal services JSON: %w", err)
 		}
 
-		// Konversi waktu ke Asia/Jakarta
+		// Convert time to Asia/Jakarta
 		reservation.Start = reservation.Start.In(location)
 		reservation.Done = reservation.Done.In(location)
 
@@ -69,7 +70,6 @@ func GetAllReservation(db *sql.DB) (result []structs.Reservation, err error) {
 
 	return result, nil
 }
-
 
 func GetAllReservationByCustomerID(db *sql.DB, customerID string) (result []structs.Reservation, err error) {
 	sqlQuery := `
@@ -149,7 +149,6 @@ func InsertReservation(db *sql.DB, reservation structs.Reservation) error {
         return fmt.Errorf("reservation not allowed, saloon is deleted")
     }
 
-    // Gunakan UTC daripada Asia/Jakarta
     localReservationStart := reservation.Start.UTC()
     localOpenTime := openTime.UTC()
     localCloseTime := closeTime.UTC()
@@ -193,8 +192,6 @@ func InsertReservation(db *sql.DB, reservation structs.Reservation) error {
     return nil
 }
 
-
-
 func CancelReservation(db *sql.DB, reservation structs.Reservation) error {
     sql := `
         UPDATE reservation
@@ -233,5 +230,3 @@ func DoneReservation(db *sql.DB, reservation structs.Reservation) error {
 
     return nil
 }
-
-
