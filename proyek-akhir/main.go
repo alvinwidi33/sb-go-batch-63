@@ -32,9 +32,9 @@ func main() {
 	if DB == nil {
 		panic("Database connection is nil")
 	}
-	_, err := DB.Exec("SET TIME ZONE 'Asia/Jakarta';")
+	_, err := DB.Exec("SET TIMEZONE TO 'Etc/GMT-7';") 
 	if err != nil {
-		panic(err)
+		log.Println("Failed to set timezone in database:", err)
 	}
 	
 	defer DB.Close()
