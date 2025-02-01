@@ -157,7 +157,6 @@ func InsertReservation(db *sql.DB, reservation structs.Reservation) error {
     reservationEndTime := localReservationStart.Add(time.Hour)
 
 
-    // Marshal services to JSON
     servicesJSON, err := json.Marshal(reservation.Services)
     if err != nil {
         return err
