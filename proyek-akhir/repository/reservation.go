@@ -30,6 +30,11 @@ func GetAllReservation(db *sql.DB) (result []structs.Reservation, err error) {
 	}
 	defer rows.Close()
 
+	location, err := time.LoadLocation("Asia/Jakarta")
+	if err != nil {
+		return nil, fmt.Errorf("failed to load time zone: %v", err)
+	}
+
 	for rows.Next() {
 		var reservation structs.Reservation
 		var customer structs.Customer
@@ -49,6 +54,10 @@ func GetAllReservation(db *sql.DB) (result []structs.Reservation, err error) {
 			return nil, fmt.Errorf("failed to unmarshal services JSON: %w", err)
 		}
 
+		// Konversi waktu ke Asia/Jakarta
+		reservation.Start = reservation.Start.In(location)
+		reservation.Done = reservation.Done.In(location)
+
 		customer.User = &user
 		reservation.Customer = &customer
 		result = append(result, reservation)
@@ -59,6 +68,81 @@ func GetAllReservation(db *sql.DB) (result []structs.Reservation, err error) {
 	}
 
 	return result, nil
+}
+
+func InsertReservation(db *sql.DB, reservation structs.Reservation) error {
+	var isMember string
+	err := db.QueryRow(`SELECT status FROM customer WHERE customer_id = $1`, reservation.CustomerID).Scan(&isMember)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("Customer not found with ID: %s", reservation.CustomerID)
+		}
+		return err
+	}
+
+	if isMember == "Not Member" {
+		return fmt.Errorf("Reservation not allowed for non-members")
+	}
+
+	var openTime, closeTime time.Time
+	var isDelete *bool
+	err = db.QueryRow(`SELECT open, close, is_delete FROM saloon WHERE id = $1`, reservation.SaloonID).Scan(&openTime, &closeTime, &isDelete)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("saloon not found with ID: %d", reservation.SaloonID)
+		}
+		return err
+	}
+
+	if isDelete != nil && *isDelete {
+		return fmt.Errorf("reservation not allowed, saloon is deleted")
+	}
+
+	location, err := time.LoadLocation("Asia/Jakarta")
+	if err != nil {
+		return fmt.Errorf("failed to load time zone: %v", err)
+	}
+
+	// Konversi waktu ke zona lokal sebelum validasi
+	openTime = openTime.In(location)
+	closeTime = closeTime.In(location)
+	localReservationStart := reservation.Start.In(location)
+	localOpenTime := time.Date(localReservationStart.Year(), localReservationStart.Month(), localReservationStart.Day(), openTime.Hour(), openTime.Minute(), openTime.Second(), 0, location)
+	localCloseTime := time.Date(localReservationStart.Year(), localReservationStart.Month(), localReservationStart.Day(), closeTime.Hour(), closeTime.Minute(), closeTime.Second(), 0, location)
+
+	if localReservationStart.Before(localOpenTime) || localReservationStart.After(localCloseTime) {
+		return fmt.Errorf("reservation start time is outside of saloon's operating hours")
+	}
+
+	reservationEndTime := localReservationStart.Add(time.Hour)
+	if reservationEndTime.After(localCloseTime) {
+		return fmt.Errorf("reservation end time is outside of saloon's operating hours")
+	}
+
+	// Simpan waktu dalam UTC di database
+	utcStart := localReservationStart.UTC()
+	utcEnd := reservationEndTime.UTC()
+
+	servicesJSON, err := json.Marshal(reservation.Services)
+	if err != nil {
+		return err
+	}
+
+	sql := `
+        INSERT INTO reservation (
+            id, services, start, done, is_done, is_cancel, rating, feedback, customer_id, saloon_id
+        ) VALUES (
+            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+        )
+    `
+	_, err = db.Exec(sql, reservation.ID, servicesJSON, utcStart, utcEnd, reservation.IsDone, reservation.IsCancel, reservation.Rating, reservation.Feedback, reservation.CustomerID, reservation.SaloonID)
+	if err != nil {
+		log.Printf("Error inserting reservation: %v\n", err)
+		return err
+	}
+
+	log.Printf("Reservation created with ID: %d\n", reservation.ID)
+	return nil
 }
 
 
