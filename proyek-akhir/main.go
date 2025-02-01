@@ -9,10 +9,21 @@ import (
 	"proyek-akhir/middleware"
 
 	"github.com/gin-gonic/gin"
+	"log"
+	"time"
 )
 var (
     DB *sql.DB
 )
+
+func init() {
+	loc, err := time.LoadLocation("Asia/Jakarta")
+	if err != nil {
+		log.Println("Failed to load timezone, defaulting to WIB (GMT+7)")
+		loc = time.FixedZone("WIB", 7*60*60) // Default ke GMT+7
+	}
+	time.Local = loc
+}
 
 func main() {
 	connection.Initiator()
