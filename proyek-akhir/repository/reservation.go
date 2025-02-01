@@ -123,7 +123,7 @@ func InsertReservation(db *sql.DB, reservation structs.Reservation) error {
     }
 
     if isMember == "Not Member" {
-        panic("Reservation not allowed for non-members")
+        return fmt.Errorf("Reservation not allowed for non-members")
     }
 
     var openTime, closeTime time.Time
@@ -140,17 +140,12 @@ func InsertReservation(db *sql.DB, reservation structs.Reservation) error {
         return fmt.Errorf("reservation not allowed, saloon is deleted")
     }
 
-    // Convert reservation time to local time zone
-    location, err := time.LoadLocation("Asia/Jakarta")
-    if err != nil {
-        return fmt.Errorf("failed to load time zone: %v", err)
-    }
+    // Gunakan UTC daripada Asia/Jakarta
+    localReservationStart := reservation.Start.UTC()
+    localOpenTime := openTime.UTC()
+    localCloseTime := closeTime.UTC()
 
-    localReservationStart := reservation.Start.In(location)
-    localOpenTime := time.Date(reservation.Start.Year(), reservation.Start.Month(), reservation.Start.Day(), openTime.Hour(), openTime.Minute(), openTime.Second(), 0, location)
-    localCloseTime := time.Date(reservation.Start.Year(), reservation.Start.Month(), reservation.Start.Day(), closeTime.Hour(), closeTime.Minute(), closeTime.Second(), 0, location)
-
-    log.Printf("Reservation start time (local): %v, Saloon open: %v, close: %v\n", localReservationStart, localOpenTime, localCloseTime)
+    log.Printf("Reservation start time (UTC): %v, Saloon open: %v, close: %v\n", localReservationStart, localOpenTime, localCloseTime)
 
     // Validate reservation time
     if localReservationStart.Before(localOpenTime) || localReservationStart.After(localCloseTime) {

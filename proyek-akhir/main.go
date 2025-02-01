@@ -9,10 +9,13 @@ import (
 	"proyek-akhir/middleware"
 
 	"github.com/gin-gonic/gin"
+
 )
 var (
     DB *sql.DB
 )
+
+
 
 func main() {
 	connection.Initiator()
@@ -21,6 +24,7 @@ func main() {
 	if DB == nil {
 		panic("Database connection is nil")
 	}
+
 
 	defer DB.Close()
 	migration.Initiator(DB)
